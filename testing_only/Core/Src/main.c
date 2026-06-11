@@ -44,6 +44,8 @@
 
 COM_InitTypeDef BspCOMInit;
 
+SAI_HandleTypeDef hsai_BlockA1;
+
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -51,6 +53,7 @@ COM_InitTypeDef BspCOMInit;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_SAI1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -90,6 +93,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USB_DEVICE_Init();
+  MX_SAI1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -155,7 +159,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLM = 1;
   RCC_OscInitStruct.PLL.PLLN = 120;
   RCC_OscInitStruct.PLL.PLLP = 2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
   RCC_OscInitStruct.PLL.PLLR = 2;
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
@@ -185,6 +189,59 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief SAI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SAI1_Init(void)
+{
+
+  /* USER CODE BEGIN SAI1_Init 0 */
+
+  /* USER CODE END SAI1_Init 0 */
+
+  /* USER CODE BEGIN SAI1_Init 1 */
+
+  /* USER CODE END SAI1_Init 1 */
+  hsai_BlockA1.Instance = SAI1_Block_A;
+  hsai_BlockA1.Init.Protocol = SAI_FREE_PROTOCOL;
+  hsai_BlockA1.Init.AudioMode = SAI_MODEMASTER_TX;
+  hsai_BlockA1.Init.DataSize = SAI_DATASIZE_24;
+  hsai_BlockA1.Init.FirstBit = SAI_FIRSTBIT_MSB;
+  hsai_BlockA1.Init.ClockStrobing = SAI_CLOCKSTROBING_FALLINGEDGE;
+  hsai_BlockA1.Init.Synchro = SAI_ASYNCHRONOUS;
+  hsai_BlockA1.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE;
+  hsai_BlockA1.Init.NoDivider = SAI_MCK_OVERSAMPLING_DISABLE;
+  hsai_BlockA1.Init.MckOverSampling = SAI_MCK_OVERSAMPLING_DISABLE;
+  hsai_BlockA1.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_EMPTY;
+  hsai_BlockA1.Init.AudioFrequency = SAI_AUDIO_FREQUENCY_48K;
+  hsai_BlockA1.Init.SynchroExt = SAI_SYNCEXT_DISABLE;
+  hsai_BlockA1.Init.MonoStereoMode = SAI_STEREOMODE;
+  hsai_BlockA1.Init.CompandingMode = SAI_NOCOMPANDING;
+  hsai_BlockA1.Init.TriState = SAI_OUTPUT_NOTRELEASED;
+  hsai_BlockA1.Init.PdmInit.Activation = DISABLE;
+  hsai_BlockA1.Init.PdmInit.MicPairsNbr = 1;
+  hsai_BlockA1.Init.PdmInit.ClockEnable = SAI_PDM_CLOCK1_ENABLE;
+  hsai_BlockA1.FrameInit.FrameLength = 256;
+  hsai_BlockA1.FrameInit.ActiveFrameLength = 1;
+  hsai_BlockA1.FrameInit.FSDefinition = SAI_FS_STARTFRAME;
+  hsai_BlockA1.FrameInit.FSPolarity = SAI_FS_ACTIVE_LOW;
+  hsai_BlockA1.FrameInit.FSOffset = SAI_FS_FIRSTBIT;
+  hsai_BlockA1.SlotInit.FirstBitOffset = 0;
+  hsai_BlockA1.SlotInit.SlotSize = SAI_SLOTSIZE_32B;
+  hsai_BlockA1.SlotInit.SlotNumber = 8;
+  hsai_BlockA1.SlotInit.SlotActive = 0x0000FFFF;
+  if (HAL_SAI_Init(&hsai_BlockA1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SAI1_Init 2 */
+
+  /* USER CODE END SAI1_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -196,6 +253,7 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
