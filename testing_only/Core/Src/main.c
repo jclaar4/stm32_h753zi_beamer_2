@@ -341,8 +341,6 @@ int main(void)
 		  tick = cur;
 	  }
 
-	  __WFI();
-
 	  process_beamer();
 
     /* USER CODE END WHILE */
