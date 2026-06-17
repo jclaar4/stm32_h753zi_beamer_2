@@ -60,6 +60,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define SAMPLES_PER_FRAME 256
+#define NUM_SLOTS_PER_SAI 8
 
 /* USER CODE BEGIN Private defines */
 

@@ -38,6 +38,7 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -46,8 +47,20 @@ COM_InitTypeDef BspCOMInit;
 
 SAI_HandleTypeDef hsai_BlockA1;
 SAI_HandleTypeDef hsai_BlockB1;
+DMA_HandleTypeDef hdma_sai1_a;
+
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+// DMA buffers
+#define BUFFER_SIZE (SAMPLES_PER_FRAME * NUM_SLOTS_PER_SAI)
+
+__attribute__((aligned(32))) int32_t audioBuffer_sai1a[BUFFER_SIZE * 2]; // Multiply by 2 for ping-pong buffer.
+int32_t * const audioBuffer_sai1a_half = audioBuffer_sai1a + BUFFER_SIZE;
+int32_t * const audioBuffer_sai1a_end = audioBuffer_sai1a + 2 * BUFFER_SIZE;
+
+__attribute__((aligned(32))) int32_t audioBuffer_sai1b[BUFFER_SIZE * 2]; // Multiply by 2 for ping-pong buffer.
+int32_t * const audioBuffer_sai1b_half = audioBuffer_sai1b + BUFFER_SIZE;
 
 /* USER CODE END PV */
 
@@ -55,8 +68,25 @@ SAI_HandleTypeDef hsai_BlockB1;
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_SAI1_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void start_dma()
+{
+	int err;
+	err = HAL_SAI_Transmit_DMA(&hsai_BlockB1, (uint8_t *) audioBuffer_sai1b, sizeof(audioBuffer_sai1b) / sizeof(audioBuffer_sai1b[0]));
+	printf("Start DMA on 1B returns %d\r\n", err);
+	err = HAL_SAI_Transmit_DMA(&hsai_BlockA1, (uint8_t *) audioBuffer_sai1a, sizeof(audioBuffer_sai1a) / sizeof(audioBuffer_sai1a[0]));
+	printf("Start DMA on 1A returned %d\r\n", err);
+}
+
+// UART transmit function for printf.
+int _write(int file, char *ptr, int len)
+{
+	HAL_UART_Transmit(&huart2, (uint8_t*) ptr, len, HAL_MAX_DELAY);
+	return len;
+}
 
 /* USER CODE END PFP */
 
@@ -97,8 +127,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USB_DEVICE_Init();
   MX_SAI1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -299,6 +331,70 @@ static void MX_SAI1_Init(void)
   /* USER CODE BEGIN SAI1_Init 2 */
 
   /* USER CODE END SAI1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
 
 }
 
