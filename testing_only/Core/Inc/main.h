@@ -62,6 +62,12 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define SAMPLES_PER_FRAME 256
 #define NUM_SLOTS_PER_SAI 8
+#define GPIO_Reset_Pin GPIO_PIN_3
+#define GPIO_Reset_GPIO_Port GPIOF
+#define GPIO_AmpMute2_Pin GPIO_PIN_3
+#define GPIO_AmpMute2_GPIO_Port GPIOA
+#define GPIO_AmpMute_Pin GPIO_PIN_0
+#define GPIO_AmpMute_GPIO_Port GPIOG
 
 /* USER CODE BEGIN Private defines */
 
