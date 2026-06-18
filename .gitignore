@@ -2,3 +2,4 @@
 testing_only/Debug
 testing_only/Release
 testing_only/.settings
+testing_only/*.launch

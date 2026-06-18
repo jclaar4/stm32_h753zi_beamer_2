@@ -122,7 +122,7 @@ float *pbeam_out[16] = {0};
 // beamer. The thirteenth channel is the LFE channel.
 float beam_out_storage[13][CH_BLOCK_SIZE*4] = {0};
 int beam_out_read_index_a = 0;
-int beam_out_write_index = 0;
+int beam_out_write_index = CH_BLOCK_SIZE * 2;
 
 void init_beamforming_pointers()
 {
@@ -331,17 +331,15 @@ int main(void)
   printf("Entering loop\n\r");
   mute_dacs(false);
   mute_amps(false);
-  int tick = HAL_GetTick();
+  int proc_tick = 0;
   while (1)
   {
-	  int cur = HAL_GetTick();
-	  if (cur - tick > 1000)
+	  int next_proc_tick = HAL_GetTick();
+	  if (next_proc_tick - proc_tick > 2)
 	  {
-		  printf("Samples: %d\n\r", avail_usb_samples());
-		  tick = cur;
+		  process_beamer();
+		  proc_tick = next_proc_tick;
 	  }
-
-	  process_beamer();
 
     /* USER CODE END WHILE */
 
@@ -524,7 +522,7 @@ static void MX_SAI1_Init(void)
   hsai_BlockA1.SlotInit.FirstBitOffset = 0;
   hsai_BlockA1.SlotInit.SlotSize = SAI_SLOTSIZE_32B;
   hsai_BlockA1.SlotInit.SlotNumber = 8;
-  hsai_BlockA1.SlotInit.SlotActive = 0x0000FFFF;
+  hsai_BlockA1.SlotInit.SlotActive = 0x000000FF;
   if (HAL_SAI_Init(&hsai_BlockA1) != HAL_OK)
   {
     Error_Handler();
@@ -554,7 +552,7 @@ static void MX_SAI1_Init(void)
   hsai_BlockB1.SlotInit.FirstBitOffset = 0;
   hsai_BlockB1.SlotInit.SlotSize = SAI_SLOTSIZE_32B;
   hsai_BlockB1.SlotInit.SlotNumber = 8;
-  hsai_BlockB1.SlotInit.SlotActive = 0x0000FFFF;
+  hsai_BlockB1.SlotInit.SlotActive = 0x000000FF;
   if (HAL_SAI_Init(&hsai_BlockB1) != HAL_OK)
   {
     Error_Handler();
