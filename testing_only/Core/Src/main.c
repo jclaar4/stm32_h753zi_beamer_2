@@ -105,6 +105,24 @@ int _write(int file, char *ptr, int len)
     return len;
 }
 
+float sine_wave[48];
+float const * sine_end = sine_wave + 48;
+float *psine_ptr = sine_wave;
+
+
+#define SAMPLE_RATE 48000.0f
+#define FREQ        1000.0f
+
+void generate_sine_1k(float *buffer)
+{
+    const int samples = (int)(SAMPLE_RATE / FREQ);   // 48 samples
+    for (int i = 0; i < samples; i++)
+    {
+        float phase = (2.0f * M_PI * i) / samples;
+        buffer[i] = 0.3 * sinf(phase);
+    }
+}
+
 // Subwoofer gain multiplier
 float sub_gain = 1.0;
 
@@ -163,7 +181,7 @@ void fill_as_much_as_possible2(int32_t *cur_a, int32_t * const cur_a_end, int32_
 {
 	bool scan_on = false;
 	int scan_channel = -1;
-	if (beam_out_read_index_a != beam_out_write_index)
+	if (0 && (beam_out_read_index_a != beam_out_write_index))
 	{
 		for (int i = 0; i < SAMPLES_PER_FRAME; ++i)
 		{
@@ -200,9 +218,22 @@ void fill_as_much_as_possible2(int32_t *cur_a, int32_t * const cur_a_end, int32_
 	}
 	else
 	{
+		int counter = 0;
 		while (cur_a != cur_a_end)
 		{
-			*cur_a = *cur_b = 0;
+			if (counter++ % 8 == 0)
+			{
+				float temp = (*psine_ptr++ * 2147483647.0f);
+				*cur_a = (int32_t) temp;
+				if (psine_ptr == sine_end)
+					psine_ptr = sine_wave;
+				*cur_a >>= 12;
+				*cur_b = 0;
+			}
+			else
+			{
+				*cur_a = *cur_b = 0;
+			}
 			cur_a++;
 			cur_b++;
 		}
@@ -228,6 +259,7 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 
 void process_beamer()
 {
+#if 0
 	while (1)
 	{
 		size_t samples = avail_usb_samples();
@@ -245,13 +277,20 @@ void process_beamer()
 			beam_in_temp[1][i] = fusb * 0.0000152587890625f;
 		}
 		// Just copy to the two outputs.
-		memcpy(&beam_out_storage[0][beam_out_write_index], beam_in_temp[0], CH_BLOCK_SIZE * sizeof(float));
-		memcpy(&beam_out_storage[1][beam_out_write_index], beam_in_temp[1], CH_BLOCK_SIZE * sizeof(float));
+		//memcpy(&beam_out_storage[0][beam_out_write_index], beam_in_temp[0], CH_BLOCK_SIZE * sizeof(float));
+		//memcpy(&beam_out_storage[1][beam_out_write_index], beam_in_temp[1], CH_BLOCK_SIZE * sizeof(float));
+		for (int i = 0; i < CH_BLOCK_SIZE; ++i)
+		{
+			beam_out_storage[1][beam_out_write_index + i] = beam_out_storage[0][beam_out_write_index + i] = *psine_ptr++;
+			if (psine_ptr == sine_end)
+				psine_ptr = sine_wave;
+		}
 
 		beam_out_write_index += CH_BLOCK_SIZE;
 		if (beam_out_write_index == BEAM_OUT_STORAGE_SIZE)
 			beam_out_write_index = 0;
 	}
+#endif
 }
 
 /* USER CODE END PFP */
@@ -270,6 +309,7 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 	init_beamforming_pointers();
+	generate_sine_1k(sine_wave);
 
   /* USER CODE END 1 */
 
