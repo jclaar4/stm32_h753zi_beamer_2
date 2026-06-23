@@ -135,12 +135,12 @@ float beam_out[12][CH_BLOCK_SIZE] = {0};
 // Pointers for passing to Beamer library.
 float * pbeam_inp[2];
 float *pbeam_out[16] = {0};
-#define BEAM_OUT_STORAGE_SIZE (CH_BLOCK_SIZE * 4)
+#define BEAM_OUT_STORAGE_SIZE (CH_BLOCK_SIZE * 8)
 // This is a temporary buffer used to store output from the
 // beamer. The thirteenth channel is the LFE channel.
-float beam_out_storage[13][CH_BLOCK_SIZE*4] = {0};
+float beam_out_storage[13][BEAM_OUT_STORAGE_SIZE] = {0};
 int beam_out_read_index_a = 0;
-int beam_out_write_index = CH_BLOCK_SIZE * 2;
+int beam_out_write_index = CH_BLOCK_SIZE * 4;
 
 void init_beamforming_pointers()
 {
@@ -177,11 +177,18 @@ int16_t next_usb_sample()
 	return rv;
 }
 
+int dma_samples = 0;
+
 void fill_as_much_as_possible2(int32_t *cur_a, int32_t * const cur_a_end, int32_t *cur_b)
 {
+	static int counter = 0;
+	if (counter++ % 256 == 0)
+	{
+		BSP_LED_Toggle(LED_GREEN);
+	}
 	bool scan_on = false;
 	int scan_channel = -1;
-	if (0 && (beam_out_read_index_a != beam_out_write_index))
+	if (beam_out_read_index_a != beam_out_write_index)
 	{
 		for (int i = 0; i < SAMPLES_PER_FRAME; ++i)
 		{
@@ -192,7 +199,7 @@ void fill_as_much_as_possible2(int32_t *cur_a, int32_t * const cur_a_end, int32_
 				float tempb = beam_out_storage[j][i + beam_out_read_index_a];
 				tempb = fmaxf(-1.0f, fminf(tempb, 1.0));
 				temp = (int32_t) (tempb * 2147483647.0f);
-				temp >>= 8;
+				temp >>= 12;
 				if (scan_on && j != scan_channel)
 					temp = 0;
 				if (j < 8)
@@ -212,16 +219,18 @@ void fill_as_much_as_possible2(int32_t *cur_a, int32_t * const cur_a_end, int32_
 				*cur_b++ = 0;
 			}
 		}
+		dma_samples++;
 		beam_out_read_index_a += CH_BLOCK_SIZE;
 		if (beam_out_read_index_a == BEAM_OUT_STORAGE_SIZE)
 			beam_out_read_index_a = 0;
 	}
 	else
 	{
+		BSP_LED_Toggle(LED_RED);
 		int counter = 0;
 		while (cur_a != cur_a_end)
 		{
-			if (counter++ % 8 == 0)
+			if (0 && (counter++ % 8 == 0))
 			{
 				float temp = (*psine_ptr++ * 2147483647.0f);
 				*cur_a = (int32_t) temp;
@@ -257,14 +266,21 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 	}
 }
 
+volatile int proc_counter = 0;
+volatile int proc_diff = 0;
+
 void process_beamer()
 {
-#if 0
+#if 1
 	while (1)
 	{
 		size_t samples = avail_usb_samples();
 		if (samples < CH_BLOCK_SIZE * 2)
 			break;
+
+		BSP_LED_Toggle(LED_YELLOW);
+		proc_counter++;
+		proc_diff = proc_counter - dma_samples;
 
 		// Transfer int16_t data to floating point in beam_inp[0] and beam_inp[1].
 		for (int i = 0; i < CH_BLOCK_SIZE; ++i)
@@ -277,14 +293,8 @@ void process_beamer()
 			beam_in_temp[1][i] = fusb * 0.0000152587890625f;
 		}
 		// Just copy to the two outputs.
-		//memcpy(&beam_out_storage[0][beam_out_write_index], beam_in_temp[0], CH_BLOCK_SIZE * sizeof(float));
-		//memcpy(&beam_out_storage[1][beam_out_write_index], beam_in_temp[1], CH_BLOCK_SIZE * sizeof(float));
-		for (int i = 0; i < CH_BLOCK_SIZE; ++i)
-		{
-			beam_out_storage[1][beam_out_write_index + i] = beam_out_storage[0][beam_out_write_index + i] = *psine_ptr++;
-			if (psine_ptr == sine_end)
-				psine_ptr = sine_wave;
-		}
+		memcpy(&beam_out_storage[0][beam_out_write_index], beam_in_temp[0], CH_BLOCK_SIZE * sizeof(float));
+		memcpy(&beam_out_storage[1][beam_out_write_index], beam_in_temp[1], CH_BLOCK_SIZE * sizeof(float));
 
 		beam_out_write_index += CH_BLOCK_SIZE;
 		if (beam_out_write_index == BEAM_OUT_STORAGE_SIZE)
