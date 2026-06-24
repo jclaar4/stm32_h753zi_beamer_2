@@ -222,10 +222,13 @@ void fill_as_much_as_possible2(int32_t *cur_a, int32_t * const cur_a_end, int32_
 		beam_out_read_index_a += CH_BLOCK_SIZE;
 		if (beam_out_read_index_a == BEAM_OUT_STORAGE_SIZE)
 			beam_out_read_index_a = 0;
+		if (beam_out_read_index_a != beam_out_write_index)
+		{
+			BSP_LED_Toggle(LED_RED);
+		}
 	}
 	else
 	{
-		BSP_LED_Toggle(LED_RED);
 		int counter = 0;
 		while (cur_a != cur_a_end)
 		{
@@ -380,15 +383,10 @@ int main(void)
   printf("Entering loop\n\r");
   mute_dacs(false);
   mute_amps(false);
-  int proc_tick = 0;
   while (1)
   {
-	  int next_proc_tick = HAL_GetTick();
-	  if (next_proc_tick - proc_tick > 2)
-	  {
-		  process_beamer();
-		  proc_tick = next_proc_tick;
-	  }
+	  HAL_Delay(2);
+	  process_beamer();
 
     /* USER CODE END WHILE */
 
