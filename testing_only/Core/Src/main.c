@@ -72,7 +72,6 @@ int32_t * const audioBuffer_sai1b_half = audioBuffer_sai1b + BUFFER_SIZE;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SAI1_Init(void);
@@ -140,7 +139,7 @@ float *pbeam_out[16] = {0};
 // beamer. The thirteenth channel is the LFE channel.
 float beam_out_storage[13][BEAM_OUT_STORAGE_SIZE] = {0};
 int beam_out_read_index_a = 0;
-int beam_out_write_index = CH_BLOCK_SIZE * 4;
+int beam_out_write_index = CH_BLOCK_SIZE * 1;
 
 void init_beamforming_pointers()
 {
@@ -246,7 +245,6 @@ void fill_as_much_as_possible2(int32_t *cur_a, int32_t * const cur_a_end, int32_
 			cur_a++;
 			cur_b++;
 		}
-
 	}
 }
 
@@ -278,7 +276,6 @@ void process_beamer()
 		if (samples < CH_BLOCK_SIZE * 2)
 			break;
 
-		BSP_LED_Toggle(LED_YELLOW);
 		proc_counter++;
 		proc_diff = proc_counter - dma_samples;
 
@@ -299,6 +296,11 @@ void process_beamer()
 		beam_out_write_index += CH_BLOCK_SIZE;
 		if (beam_out_write_index == BEAM_OUT_STORAGE_SIZE)
 			beam_out_write_index = 0;
+
+		if (beam_out_write_index == beam_out_read_index_a)
+		{
+			BSP_LED_Toggle(LED_YELLOW);
+		}
 	}
 #endif
 }
@@ -334,9 +336,6 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* Configure the peripherals common clocks */
-  PeriphCommonClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
@@ -451,32 +450,6 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-/**
-  * @brief Peripherals Common Clock Configuration
-  * @retval None
-  */
-void PeriphCommonClock_Config(void)
-{
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-
-  /** Initializes the peripherals clock
-  */
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SAI1;
-  PeriphClkInitStruct.PLL2.PLL2M = 5;
-  PeriphClkInitStruct.PLL2.PLL2N = 192;
-  PeriphClkInitStruct.PLL2.PLL2P = 25;
-  PeriphClkInitStruct.PLL2.PLL2Q = 2;
-  PeriphClkInitStruct.PLL2.PLL2R = 2;
-  PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_0;
-  PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
-  PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
-  PeriphClkInitStruct.Sai1ClockSelection = RCC_SAI1CLKSOURCE_PLL2;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
